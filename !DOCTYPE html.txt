@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Icon</title>
+    <style>
+        /* Style the chatbot icon (customize as needed) */
+        .chat-icon {
+            background-color: #0074D9;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Style the iframe container (initially hidden) */
+        #chatbot-container {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 300px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Chatbot icon -->
+    <div class="chat-icon" onclick="showChatbot()">🗨️</div>
+
+    <!-- Container for the chatbot iframe -->
+    <div id="chatbot-container">
+        <iframe src='https://webchat.botframework.com/embed/languageddeovrat-bot?s=Lzbm1C6vfL8.nS-na-WD-2PNhGKkm4kfDd0Fy-pUasT6ZWOhQ4MhXIQ' frameborder="0" ></iframe>
+    </div>
+
+    <script>
+        // Show the chatbot iframe
+        function showChatbot() {
+            document.getElementById("chatbot-container").style.display = "block";
+        }
+    </script>
+</body>
+</html>
