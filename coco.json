@@ -1,0 +1,50 @@
+{
+    "images": [
+      {
+        "id": 1,
+        "width": 1024,
+        "height": 768,
+        "file_name": "abc.jpg",
+        "coco_url": "AmlDatastore://fruit/abc.jpg",
+        "absolute_url": "https://myBlobStorage.blob.core.windows.net/fruit/abc.jpg",
+        "date_captured": "<date>"
+      },
+      {
+        "id": 2,
+        "width": 1024,
+        "height": 768,
+        "file_name": "xyz.jpg",
+        "coco_url": "AmlDatastore://fruit/xyz.jpg",
+        "absolute_url": "https://myBlobStorage.blob.core.windows.net/fruit/xyz.jpg",
+        "date_captured": "<date>"
+      }
+    ],
+    "annotations": [
+      {
+        "id": 1,
+        "category_id": 1,
+        "image_id": 1,
+        "area": 0.0
+      },
+      {
+        "id": 2,
+        "category_id": 1,
+        "image_id": 2,
+        "area": 0.0
+      }
+    ],
+    "categories": [
+      {
+        "id": 1,
+        "name": "apple"
+      },
+      {
+        "id": 2,
+        "name": "orange"
+      },
+      {
+        "id": 3,
+        "name": "banana"
+      }
+    ]
+  }
