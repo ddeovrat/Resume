@@ -1,0 +1,74 @@
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using DocumentFormat.OpenXml.Packaging;
+using OpenXmlPowerTools;
+using System.Xml.Linq;
+using System.IO;
+using Azure;
+using Azure.AI.FormRecognizer.DocumentAnalysis;
+using System.Text.Json;
+
+class Program
+{
+    public static async Task<string> FetchDataFromWebsite(string url)
+    {
+        using (var client = new HttpClient())
+        {
+            var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
+    }
+
+    public static JObject ParseJson(string json)
+    {
+        return JObject.Parse(json);
+    }
+
+    public static async Task<string> ExtractData(string apiKey, string endpoint, string jsonContent)
+    {
+        var client = new DocumentAnalysisClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
+        var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(jsonContent));
+       
+        var analysisOperation = await client.AnalyzeDocumentAsync(WaitUntil.Completed, "prebuilt-document", stream);
+        return JsonSerializer.Serialize(analysisOperation.Value, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public static void CreateDocument(string extractedData)
+    {
+        using (var wordDocument = WordprocessingDocument.Create("output.docx", DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
+        {
+            var mainPart = wordDocument.AddMainDocumentPart();
+            mainPart.Document = new DocumentFormat.OpenXml.Wordprocessing.Document();
+            mainPart.Document.Body = new DocumentFormat.OpenXml.Wordprocessing.Body();
+
+            var doc = new XDocument(
+                new XElement(W.body,
+                    new XElement(W.p,
+                        new XElement(W.r,
+                            new XElement(W.t, extractedData))
+                    )
+                )
+            );
+
+            var wmlDoc = new WmlDocument("output.docx", doc);
+            var settings = new WmlToHtmlConverterSettings { PageTitle = "Extracted Data" };
+            var htmlDoc = WmlToHtmlConverter.ConvertToHtml(wmlDoc, settings);
+            File.WriteAllText("output.html", htmlDoc.ToString(SaveOptions.DisableFormatting));
+        }
+    }
+
+    static async Task Main(string[] args)
+    {
+        var url = "YOUR_WEBSITE_URL";
+        var apiKey = "YOUR_API_KEY";
+        var endpoint = "YOUR_ENDPOINT_URL";
+
+        var jsonContent = await FetchDataFromWebsite(url);
+        var parsedJson = ParseJson(jsonContent);
+        var extractedData = await ExtractData(apiKey, endpoint, jsonContent);
+        CreateDocument(extractedData);
+    }
+}
