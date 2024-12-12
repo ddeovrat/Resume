@@ -8,10 +8,31 @@ using System.Xml.Linq;
 using System.IO;
 using Azure;
 using Azure.AI.FormRecognizer.DocumentAnalysis;
+using Azure.AI.OpenAI;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Models;
+using Azure.Search.Documents.Indexes;
+using Azure.Search.Documents.Indexes.Models;
 using System.Text.Json;
 
 class Program
 {
+    static async Task Main(string[] args)
+    {
+        var url = "YOUR_WEBSITE_URL";
+        var searchServiceName = "YOUR_SEARCH_SERVICE_NAME";
+        var searchIndexName = "YOUR_SEARCH_INDEX_NAME";
+        var searchApiKey = "YOUR_SEARCH_API_KEY";
+        var openAiEndpoint = "YOUR_OPENAI_ENDPOINT";
+        var openAiApiKey = "YOUR_OPENAI_API_KEY";
+
+        var jsonContent = await FetchDataFromWebsite(url);
+        var parsedJson = ParseJson(jsonContent);
+        var searchResults = await SearchAsync(searchServiceName, searchIndexName, searchApiKey, parsedJson.ToString());
+        var openAiResponse = await GenerateResponseAsync(openAiEndpoint, openAiApiKey, searchResults);
+        CreateDocument(openAiResponse);
+    }
+
     public static async Task<string> FetchDataFromWebsite(string url)
     {
         using (var client = new HttpClient())
@@ -27,13 +48,37 @@ class Program
         return JObject.Parse(json);
     }
 
-    public static async Task<string> ExtractData(string apiKey, string endpoint, string jsonContent)
+    public static async Task<SearchResults<SearchDocument>> SearchAsync(string serviceName, string indexName, string apiKey, string query)
     {
-        var client = new DocumentAnalysisClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
-        var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(jsonContent));
-       
-        var analysisOperation = await client.AnalyzeDocumentAsync(WaitUntil.Completed, "prebuilt-document", stream);
-        return JsonSerializer.Serialize(analysisOperation.Value, new JsonSerializerOptions { WriteIndented = true });
+        var endpoint = new Uri($"https://{serviceName}.search.windows.net");
+        var credential = new AzureKeyCredential(apiKey);
+        var client = new SearchClient(endpoint, indexName, credential);
+
+        var options = new SearchOptions
+        {
+            IncludeTotalCount = true,
+            Size = 5
+        };
+        return await client.SearchAsync<SearchDocument>(query, options);
+    }
+
+    public static async Task<string> GenerateResponseAsync(string endpoint, string apiKey, SearchResults<SearchDocument> searchResults)
+    {
+        var client = new OpenAIClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
+        var prompt = "Based on the following search results, generate a response:\n";
+
+        foreach (var result in searchResults.GetResults())
+        {
+            prompt += result.Document["content"] + "\n";
+        }
+
+        var completionOptions = new CompletionsOptions
+        {
+            MaxTokens = 150,
+            Temperature = 0.7
+        };
+        var response = await client.GetCompletionsAsync("your-deployment-name", prompt, completionOptions);
+        return response.Value.Choices[0].Text;
     }
 
     public static void CreateDocument(string extractedData)
@@ -58,17 +103,5 @@ class Program
             var htmlDoc = WmlToHtmlConverter.ConvertToHtml(wmlDoc, settings);
             File.WriteAllText("output.html", htmlDoc.ToString(SaveOptions.DisableFormatting));
         }
-    }
-
-    static async Task Main(string[] args)
-    {
-        var url = "YOUR_WEBSITE_URL";
-        var apiKey = "YOUR_API_KEY";
-        var endpoint = "YOUR_ENDPOINT_URL";
-
-        var jsonContent = await FetchDataFromWebsite(url);
-        var parsedJson = ParseJson(jsonContent);
-        var extractedData = await ExtractData(apiKey, endpoint, jsonContent);
-        CreateDocument(extractedData);
     }
 }
